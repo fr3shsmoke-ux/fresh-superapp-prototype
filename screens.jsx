@@ -2097,10 +2097,10 @@ function LotteryCountdown({ deadlineMs, compact = false }) {
 function useCountUp(target, dur = 900) {
   const [n, setN] = React.useState(0);
   React.useEffect(() => {
-    if (!target) { setN(target || 0); return; }
-    const t0 = performance.now();
-    let raf;
+    if (!target) { setN(0); return; }
+    let raf, t0 = null;
     const tick = (t) => {
+      if (t0 === null) t0 = t;
       const p = Math.min(1, (t - t0) / dur);
       setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
       if (p < 1) raf = requestAnimationFrame(tick);
