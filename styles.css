@@ -1366,6 +1366,86 @@ button:active {
   text-align: center; font-size: 11px; color: var(--fg-mute); margin-bottom: 8px;
 }
 
+/* ─── Участницкий флоу v61 — «Вы участвуете» + «Победители» ─── */
+.lottery-joined-burst { position: relative; width: 104px; margin: 0 auto 12px; }
+.lottery-spark {
+  position: absolute; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); pointer-events: none;
+}
+.lottery-spark-1 { left: 2%;   top: 30%; animation: wizard-sparkle-rise 2.8s ease-out 0s   infinite; }
+.lottery-spark-2 { right: 0%;  top: 18%; animation: wizard-sparkle-rise 2.8s ease-out 0.7s infinite; background: #5BE3F2; }
+.lottery-spark-3 { left: 14%;  top: 64%; animation: wizard-sparkle-rise 2.8s ease-out 1.4s infinite; }
+.lottery-spark-4 { right: 10%; top: 56%; animation: wizard-sparkle-rise 2.8s ease-out 2.0s infinite; background: #5BE3F2; }
+
+.lottery-joined-cd { margin-top: 14px; }
+
+.lottery-chance-card {
+  margin-top: 14px; padding: 13px 14px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line);
+  border-radius: 12px;
+}
+.lottery-chance-main { display: flex; align-items: center; gap: 11px; }
+.lottery-chance-val {
+  font-size: 17px; font-weight: 800; color: var(--fg);
+  font-family: 'JetBrains Mono', monospace; letter-spacing: -0.3px;
+}
+.lottery-chance-cap { font-size: 11px; color: var(--fg-mute); margin-top: 1px; }
+.lottery-chance-hint {
+  font-size: 10.5px; color: var(--accent-strong); font-weight: 700;
+  margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--accent-line);
+}
+
+.lottery-joined-next {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding: 11px 13px;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: 11px;
+  font-size: 11.5px; color: var(--fg-mute); line-height: 1.45;
+}
+
+.lottery-verify-step {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px; border-radius: 11px;
+  background: var(--bg-1); border: 1px solid var(--line);
+}
+.lottery-verify-step-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); border: 1px solid var(--accent-line);
+  color: var(--accent-strong); font-size: 11px; font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.lottery-hash-box {
+  margin: 14px 0; padding: 11px 13px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.lottery-hash-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 9.5px; font-weight: 700; color: var(--fg-mute);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;
+}
+.lottery-hash-copy {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--accent); font-family: inherit; font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.lottery-hash-val {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--accent); word-break: break-all;
+}
+
+.lottery-winner-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-3); color: var(--fg);
+  font-size: 13px; font-weight: 700;
+}
+.lottery-winner-row.winner-top {
+  background: linear-gradient(180deg, rgba(255,215,0,0.10) 0%, var(--bg-1) 70%);
+  border-color: rgba(255,215,0,0.28);
+}
+
 /* Wizard */
 .wizard-stepper {
   display: flex; gap: 4px; padding: 6px 16px 8px;

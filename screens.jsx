@@ -2289,7 +2289,10 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
 }
 
 function LotteryJoinedScreen({ lottery: l, accent, onBack, onViewWinners }) {
-  const ticketNum = String(Math.floor(Math.random() * 99999)).padStart(5, '0');
+  const [ticketNum] = React.useState(() => Math.floor(Math.random() * 100000));
+  const rolled = useCountUp(ticketNum, 1100);
+  const odds = l.joined > 0 ? Math.max(1, Math.round(l.joined / Math.max(1, l.maxWinners))) : 0;
+  const extras = l.extras || [];
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 100px' }}>
       <div className="lottery-detail-topbar">
@@ -2297,39 +2300,93 @@ function LotteryJoinedScreen({ lottery: l, accent, onBack, onViewWinners }) {
           <iconify-icon icon="ph:caret-left-bold" width="18" height="18" style={{ display: 'inline-flex' }}/>
         </button>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-mute)' }}>Вы участвуете</span>
-        <span style={{ width: 32 }}/>
+        <button onClick={() => window.toast && window.toast('Ссылка скопирована')} className="lottery-share-btn">
+          <iconify-icon icon="ph:share-network-duotone" width="16" height="16" style={{ display: 'inline-flex' }}/>
+        </button>
       </div>
 
-      <div style={{ padding: '20px 16px' }}>
+      <div style={{ padding: '18px 16px' }}>
+        {/* Celebration */}
         <div className="lottery-joined-celebration">
-          <LottieIcon name="lottery-ticket" width={120} height={120} style={{ display: 'block', filter: 'drop-shadow(0 8px 16px rgba(91,227,242,0.4))', marginBottom: 14 }}/>
+          <div className="lottery-joined-burst">
+            <LottieIcon name="lottery-ticket" width={104} height={104} style={{ display: 'block', margin: '0 auto' }}/>
+            <span className="lottery-spark lottery-spark-1"/>
+            <span className="lottery-spark lottery-spark-2"/>
+            <span className="lottery-spark lottery-spark-3"/>
+            <span className="lottery-spark lottery-spark-4"/>
+          </div>
           <div className="lottery-joined-title">Вы в розыгрыше!</div>
-          <div className="lottery-joined-subtitle">{l.prize}</div>
+          <div className="lottery-joined-subtitle">{l.prizeIcon} {l.prize}</div>
         </div>
 
+        {/* Ticket */}
         <div className="lottery-ticket">
           <div className="lottery-ticket-label">Ваш номер билета</div>
-          <div className="lottery-ticket-num">#{ticketNum}</div>
+          <div className="lottery-ticket-num">#{String(rolled).padStart(5, '0')}</div>
           <div className="lottery-ticket-meta">
             <span>{l.channelEmoji} {l.ch}</span>
-            <span>⏰ {l.deadline}</span>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>{l.maxWinners} побед.</span>
           </div>
         </div>
 
-        <div className="lottery-section-title" style={{ marginTop: 18 }}>Увеличить шанс</div>
-        <button onClick={() => window.toast && window.toast('Ссылка приглашения скопирована')} className="lottery-share-cta">
-          <iconify-icon icon="ph:share-network-duotone" width="18" height="18" style={{ display: 'inline-flex' }}/>
-          <span>Пригласи друга — +1 билет</span>
-          <iconify-icon icon="ph:caret-right-bold" width="14" height="14" style={{ display: 'inline-flex' }}/>
-        </button>
+        {/* Countdown to draw */}
+        <div className="lottery-joined-cd">
+          <div className="lottery-cd-caption" style={{ textAlign: 'center' }}>До розыгрыша</div>
+          <LotteryCountdown deadlineMs={l.deadlineMs} compact/>
+        </div>
 
-        <div className="lottery-verify-box" style={{ marginTop: 16 }}>
+        {/* Your chance */}
+        <div className="lottery-chance-card">
+          <div className="lottery-chance-main">
+            <iconify-icon icon="ph:target-duotone" width="24" height="24" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
+            <div style={{ flex: 1 }}>
+              <div className="lottery-chance-val">{odds ? `1 из ${odds.toLocaleString('ru-RU')}` : 'высокий'}</div>
+              <div className="lottery-chance-cap">твой шанс с одним билетом</div>
+            </div>
+          </div>
+          <div className="lottery-chance-hint">Больше билетов — выше шанс ↓</div>
+        </div>
+
+        {/* Increase chance */}
+        <div className="lottery-section-title">Увеличить шанс</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {extras.map((e, i) => {
+            const extraIcon = e.type === 'invite' ? 'lottery-invite' : e.type === 'boost' ? 'lottery-boost' : 'lottery-story';
+            return (
+              <button key={i} onClick={() => window.toast && window.toast('Откроется в боте')}
+                className="lottery-extra-item"
+                style={{ cursor: 'pointer', width: '100%', fontFamily: 'inherit', color: 'var(--fg)', textAlign: 'left' }}>
+                <LottieIcon name={extraIcon} width={34} height={34} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}/>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{e.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--fg-mute)', marginTop: 2 }}>{e.max ? `до ${e.max} билетов` : 'бонусный билет'}</div>
+                </div>
+                <div className="lottery-extra-badge">+{e.tickets}</div>
+              </button>
+            );
+          })}
+          <button onClick={() => window.toast && window.toast('Ссылка приглашения скопирована')} className="lottery-share-cta">
+            <iconify-icon icon="ph:share-network-duotone" width="18" height="18" style={{ display: 'inline-flex' }}/>
+            <span style={{ flex: 1, textAlign: 'left' }}>Поделиться с друзьями</span>
+            <iconify-icon icon="ph:caret-right-bold" width="14" height="14" style={{ display: 'inline-flex' }}/>
+          </button>
+        </div>
+
+        {/* What's next */}
+        <div className="lottery-joined-next">
+          <iconify-icon icon="ph:bell-ringing-duotone" width="18" height="18" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
+          <span>Победителей объявим через {l.deadline} — пришлём уведомление в бот.</span>
+        </div>
+
+        {/* Verify */}
+        <div className="lottery-verify-box" style={{ marginTop: 12 }}>
           <iconify-icon icon="ph:shield-check-duotone" width="22" height="22" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12.5, fontWeight: 700 }}>Розыгрыш честный</div>
-            <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 2 }}>Победители определятся по seed: <code style={{ fontSize: 9.5 }}>{l.verifySeed}</code></div>
+            <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 2 }}>Победители по seed: <code style={{ fontSize: 9.5 }}>{l.verifySeed}</code></div>
           </div>
-          <button onClick={onViewWinners} style={{ background: 'transparent', border: 'none', color: accent, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={onViewWinners} style={{ background: 'transparent', border: 'none', color: accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
             Подробнее →
           </button>
         </div>
@@ -2346,6 +2403,11 @@ function LotteryWinnersScreen({ lottery: l, accent, onBack }) {
     { name: 'Е***а С.',  ticket: '01092', country: 'RU' },
     { name: 'И***н М.',  ticket: '06378', country: 'BY' },
   ].slice(0, l.maxWinners);
+  const steps = [
+    { ic: 'ph:lock-key-duotone',    t: 'Commit',   d: 'Хэш секретного seed зафиксирован до старта' },
+    { ic: 'ph:users-three-duotone', t: 'Розыгрыш', d: 'Идёт сбор участников — seed скрыт от всех' },
+    { ic: 'ph:seal-check-duotone',  t: 'Reveal',   d: 'Seed раскрыт — расчёт может проверить каждый' },
+  ];
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 100px' }}>
       <div className="lottery-detail-topbar">
@@ -2356,42 +2418,67 @@ function LotteryWinnersScreen({ lottery: l, accent, onBack }) {
         <span style={{ width: 32 }}/>
       </div>
 
-      <div style={{ padding: '20px 16px' }}>
-        <div className="lottery-verify-explainer">
-          <div style={{ textAlign: 'center', marginBottom: 10 }}>
-            <LottieIcon name="lottery-verify" width={64} height={64} style={{ display: 'inline-block', filter: 'drop-shadow(0 4px 8px rgba(91,227,242,0.4))' }}/>
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>Commit-reveal verification</div>
-          <div style={{ fontSize: 12, color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.5 }}>
-            До старта розыгрыша мы фиксируем <b>хэш</b> секретного seed. После завершения раскрываем seed и каждый может проверить — победители выбраны именно из участников и именно по этому seed.
+      <div style={{ padding: '18px 16px' }}>
+        {/* Hero explainer */}
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <LottieIcon name="lottery-verify" width={72} height={72} style={{ display: 'block', margin: '0 auto 8px' }}/>
+          <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>Честный розыгрыш</div>
+          <div style={{ fontSize: 11.5, color: 'var(--fg-mute)', marginTop: 4, lineHeight: 1.5 }}>
+            Победителей выбирает не человек, а проверяемый алгоритм
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-2)', borderRadius: 10, padding: 12, margin: '16px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-          <div style={{ color: 'var(--fg-mute)', marginBottom: 4 }}>Hash (commit):</div>
-          <div style={{ color: accent, wordBreak: 'break-all' }}>{l.verifySeed}</div>
-        </div>
-
-        <div className="lottery-section-title">Победители (пример)</div>
+        {/* 3 steps commit-reveal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {winners.map((w, i) => (
-            <div key={i} className="lottery-winner-row">
-              <div className="lottery-winner-place" style={{ background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'var(--bg-2)', color: i < 3 ? '#000' : 'var(--fg)' }}>
-                {i + 1}
+          {steps.map((s, i) => (
+            <div key={i} className="lottery-verify-step">
+              <div className="lottery-verify-step-num">{i + 1}</div>
+              <iconify-icon icon={s.ic} width="24" height="24" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{s.t}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 1, lineHeight: 1.4 }}>{s.d}</div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--fg-mute)' }}>Билет #{w.ticket} · {w.country}</div>
-              </div>
-              {i === 0
-                ? <LottieIcon name="lottery-trophy" width={32} height={32} style={{ filter: 'drop-shadow(0 2px 4px rgba(255,215,0,0.5))' }}/>
-                : <iconify-icon icon="ph:trophy-fill" width="18" height="18" style={{ display: 'inline-flex', color: 'var(--fg-dim)' }}/>}
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: 18, padding: 14, background: 'var(--accent-soft)', borderRadius: 10, border: `1px solid var(--accent-line)`, fontSize: 11.5, color: 'var(--fg)', lineHeight: 1.5 }}>
-          <b style={{ color: accent }}>Демо-данные.</b> В реальном розыгрыше победители появятся здесь автоматически после reveal seed. Проверить расчёт сможет любой через <code style={{ fontSize: 10 }}>open-source verifier</code>.
+        {/* Hash box */}
+        <div className="lottery-hash-box">
+          <div className="lottery-hash-head">
+            <span>Hash (commit)</span>
+            <button onClick={() => window.toast && window.toast('Хэш скопирован')} className="lottery-hash-copy">
+              <iconify-icon icon="ph:copy-duotone" width="13" height="13" style={{ display: 'inline-flex' }}/>
+              копировать
+            </button>
+          </div>
+          <div className="lottery-hash-val">{l.verifySeed}</div>
+        </div>
+
+        {/* Winners */}
+        <div className="lottery-section-title">Победители (пример)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {winners.map((w, i) => {
+            const medal = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : null;
+            return (
+              <div key={i} className={`lottery-winner-row${i === 0 ? ' winner-top' : ''}`}>
+                <div className="lottery-winner-place" style={{ background: medal || 'var(--bg-2)', color: medal ? '#000' : 'var(--fg)' }}>
+                  {i + 1}
+                </div>
+                <div className="lottery-winner-avatar">{w.name.charAt(0)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--fg-mute)' }}>Билет #{w.ticket} · {w.country}</div>
+                </div>
+                {i === 0
+                  ? <LottieIcon name="lottery-trophy" width={34} height={34} style={{ filter: 'drop-shadow(0 2px 6px rgba(255,215,0,0.5))' }}/>
+                  : <iconify-icon icon="ph:trophy-fill" width="16" height="16" style={{ display: 'inline-flex', color: 'var(--fg-dim)' }}/>}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 16, padding: 12, background: 'var(--accent-soft)', borderRadius: 10, border: '1px solid var(--accent-line)', fontSize: 11, color: 'var(--fg)', lineHeight: 1.5 }}>
+          <b style={{ color: accent }}>Демо-данные.</b> В реальном розыгрыше победители появятся автоматически после reveal seed — расчёт сможет проверить любой.
         </div>
       </div>
     </div>
