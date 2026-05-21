@@ -3080,6 +3080,7 @@ function LotteryCreateWizard({ accent, onClose, onPublish }) {
           {(() => {
             // v41: ВСЕ 10 APNG (Founder picks 2026-05-20 round 2).
             // Steps 2/3/4/6/10 заменены с static на семантически-стрейч APNG.
+            // v59: step 11 (Предварительный просмотр) — APNG «глаза» (MS Fluent animated).
             const FLUENT_MAP = {
               1:  './assets/icons/wizard/party-popper-v40.png',
               2:  './assets/icons/wizard/robot-v41.png',
@@ -3091,6 +3092,7 @@ function LotteryCreateWizard({ accent, onClose, onPublish }) {
               8:  './assets/icons/wizard/handshake-v35.png',
               9:  './assets/icons/wizard/camera-flash-v40.png',
               10: './assets/icons/wizard/mechanical-arm-v41.png',
+              11: './assets/icons/wizard/eyes-v41.png',
             };
             const src = FLUENT_MAP[step];
             if (!src) return cur.emoji;
