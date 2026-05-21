@@ -2310,10 +2310,6 @@ function LotteryJoinedScreen({ lottery: l, accent, onBack, onViewWinners }) {
         <div className="lottery-joined-celebration">
           <div className="lottery-joined-burst">
             <LottieIcon name="lottery-ticket" width={104} height={104} style={{ display: 'block', margin: '0 auto' }}/>
-            <span className="lottery-spark lottery-spark-1"/>
-            <span className="lottery-spark lottery-spark-2"/>
-            <span className="lottery-spark lottery-spark-3"/>
-            <span className="lottery-spark lottery-spark-4"/>
           </div>
           <div className="lottery-joined-title">Вы в розыгрыше!</div>
           <div className="lottery-joined-subtitle">{l.prizeIcon} {l.prize}</div>

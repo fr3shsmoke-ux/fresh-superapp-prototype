@@ -1368,14 +1368,6 @@ button:active {
 
 /* ─── Участницкий флоу v61 — «Вы участвуете» + «Победители» ─── */
 .lottery-joined-burst { position: relative; width: 104px; margin: 0 auto 12px; }
-.lottery-spark {
-  position: absolute; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent); pointer-events: none;
-}
-.lottery-spark-1 { left: 2%;   top: 30%; animation: wizard-sparkle-rise 2.8s ease-out 0s   infinite; }
-.lottery-spark-2 { right: 0%;  top: 18%; animation: wizard-sparkle-rise 2.8s ease-out 0.7s infinite; background: #5BE3F2; }
-.lottery-spark-3 { left: 14%;  top: 64%; animation: wizard-sparkle-rise 2.8s ease-out 1.4s infinite; }
-.lottery-spark-4 { right: 10%; top: 56%; animation: wizard-sparkle-rise 2.8s ease-out 2.0s infinite; background: #5BE3F2; }
 
 .lottery-joined-cd { margin-top: 14px; }
 
