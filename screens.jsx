@@ -2063,9 +2063,87 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
   );
 }
 
+// ─── Участницкий флоу: живой таймер, count-up, соц-тикер (v60) ───
+function LotteryCountdown({ deadlineMs, compact = false }) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const diff = Math.max(0, (deadlineMs || 0) - now);
+  if (diff === 0) return <div className="lottery-countdown ended">Розыгрыш завершён</div>;
+  const units = [
+    { v: Math.floor(diff / 86400000), l: 'дн' },
+    { v: Math.floor((diff % 86400000) / 3600000), l: 'ч' },
+    { v: Math.floor((diff % 3600000) / 60000), l: 'мин' },
+    { v: Math.floor((diff % 60000) / 1000), l: 'сек' },
+  ];
+  const urgent = diff < 86400000;
+  return (
+    <div className={`lottery-countdown${compact ? ' compact' : ''}${urgent ? ' urgent' : ''}`}>
+      {units.map((u, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="lottery-cd-sep">:</span>}
+          <div className="lottery-cd-unit">
+            <div className="lottery-cd-num">{String(u.v).padStart(2, '0')}</div>
+            <div className="lottery-cd-label">{u.l}</div>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function useCountUp(target, dur = 900) {
+  const [n, setN] = React.useState(0);
+  React.useEffect(() => {
+    if (!target) { setN(target || 0); return; }
+    const t0 = performance.now();
+    let raf;
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return n;
+}
+
+const LOTTERY_TICKER = [
+  { who: 'Анна К.', verb: 'вступила' },
+  { who: 'Дмитрий П.', verb: 'вступил' },
+  { who: 'Мария С.', verb: 'вступила' },
+  { who: 'Иван Л.', verb: 'вступил' },
+  { who: 'Елена В.', verb: 'вступила' },
+  { who: 'Сергей М.', verb: 'вступил' },
+  { who: 'Ольга Т.', verb: 'вступила' },
+  { who: 'Никита Р.', verb: 'вступил' },
+];
+
+function LotteryJoinTicker({ joined }) {
+  const [i, setI] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setI(x => x + 1), 2600);
+    return () => clearInterval(t);
+  }, []);
+  const e = LOTTERY_TICKER[i % LOTTERY_TICKER.length];
+  return (
+    <div className="lottery-ticker">
+      <span className="lottery-ticker-dot"/>
+      <span key={i} className="lottery-ticker-text"><b>{e.who}</b> {e.verb} · только что</span>
+      <span className="lottery-ticker-hot">🔥 +{18 + joined % 42}/час</span>
+    </div>
+  );
+}
+
 function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onViewWinners }) {
   const [conditionsMet, setConditionsMet] = React.useState({});
-  const allConditionsMet = l.conditions.every(c => conditionsMet[c.target]);
+  const metCount = l.conditions.filter(c => conditionsMet[c.target]).length;
+  const allConditionsMet = metCount === l.conditions.length;
+  const joinedCount = useCountUp(l.joined);
+  const odds = l.joined > 0 ? Math.max(1, Math.round(l.joined / Math.max(1, l.maxWinners))) : 0;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 100px', position: 'relative' }}>
       {/* Header with back */}
@@ -2082,7 +2160,8 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
       {/* Hero prize */}
       <div className="lottery-detail-hero" style={{ '--hero-accent': l.accentColor }}>
         <div className="lottery-detail-hero-glow"/>
-        <div className="lottery-detail-hero-emoji">{l.prizeIcon}</div>
+        <div className="lottery-detail-live"><span className="lottery-live-dot"/>Идёт сейчас</div>
+        <div className="lottery-detail-hero-emoji lottery-hero-float">{l.prizeIcon}</div>
         <div className="lottery-detail-hero-title">{l.title}</div>
         <div className="lottery-detail-hero-prize">{l.prize}</div>
         <div className="lottery-detail-hero-meta">
@@ -2092,37 +2171,59 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
             {PARTNER_TYPE_LABEL[l.type]}
           </span>
         </div>
+        <div className="lottery-detail-cd-wrap">
+          <div className="lottery-cd-caption">До конца розыгрыша</div>
+          <LotteryCountdown deadlineMs={l.deadlineMs}/>
+        </div>
       </div>
 
       {/* Stats row */}
       <div className="lottery-detail-stats">
         <div className="lottery-detail-stat">
-          <div className="lottery-detail-stat-value">⏰ {l.deadline}</div>
-          <div className="lottery-detail-stat-label">До конца</div>
-        </div>
-        <div className="lottery-detail-stat">
-          <div className="lottery-detail-stat-value">{l.joined.toLocaleString('ru-RU')}</div>
+          <div className="lottery-detail-stat-value">{joinedCount.toLocaleString('ru-RU')}</div>
           <div className="lottery-detail-stat-label">Участников</div>
         </div>
         <div className="lottery-detail-stat">
           <div className="lottery-detail-stat-value">{l.maxWinners}</div>
           <div className="lottery-detail-stat-label">Победителей</div>
         </div>
+        <div className="lottery-detail-stat">
+          <div className="lottery-detail-stat-value" style={{ color: accent }}>{odds ? `~1 / ${odds}` : '—'}</div>
+          <div className="lottery-detail-stat-label">Шанс</div>
+        </div>
       </div>
+
+      {/* Live social proof */}
+      <LotteryJoinTicker joined={l.joined}/>
 
       {/* Conditions */}
       <div style={{ padding: '0 16px' }}>
-        <div className="lottery-section-title">Условия участия</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {l.conditions.map((c, i) => (
-            <button key={i} onClick={() => setConditionsMet(s => ({ ...s, [c.target]: !s[c.target] }))} className="lottery-condition-item" style={{ borderColor: conditionsMet[c.target] ? accent : 'var(--line)' }}>
-              <div className="lottery-condition-check" style={{ background: conditionsMet[c.target] ? accent : 'transparent', borderColor: conditionsMet[c.target] ? accent : 'var(--line-strong)' }}>
-                {conditionsMet[c.target] && '✓'}
-              </div>
-              <div style={{ flex: 1, textAlign: 'left' }}>{c.label}</div>
-              <iconify-icon icon={c.type === 'subscribe' ? 'ph:telegram-logo-duotone' : 'ph:qr-code-duotone'} width="18" height="18" style={{ display: 'inline-flex', color: 'var(--fg-mute)' }}/>
-            </button>
-          ))}
+        <div className="lottery-cond-head">
+          <div className="lottery-section-title" style={{ margin: 0 }}>Условия участия</div>
+          <div className="lottery-cond-count">{metCount} / {l.conditions.length}</div>
+        </div>
+        <div className="lottery-cond-progress">
+          <div className="lottery-cond-progress-fill" style={{ width: `${l.conditions.length ? (metCount / l.conditions.length) * 100 : 0}%`, background: accent }}/>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+          {l.conditions.map((c, i) => {
+            const met = !!conditionsMet[c.target];
+            return (
+              <button key={i} onClick={() => setConditionsMet(s => ({ ...s, [c.target]: !s[c.target] }))}
+                className={`lottery-condition-item${met ? ' met' : ''}`}>
+                <div className="lottery-cond-avatar">
+                  <iconify-icon icon={c.type === 'subscribe' ? 'ph:telegram-logo-fill' : 'ph:qr-code-bold'} width="17" height="17" style={{ display: 'inline-flex' }}/>
+                </div>
+                <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 1 }}>{c.type === 'subscribe' ? 'Подписка на канал' : 'Сканировать QR-код'}</div>
+                </div>
+                <div className="lottery-condition-check" style={{ background: met ? accent : 'transparent', borderColor: met ? accent : 'var(--line-strong)' }}>
+                  {met && <iconify-icon icon="ph:check-bold" width="12" height="12" style={{ display: 'inline-flex' }}/>}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Extras (bonus tickets) */}
@@ -2137,9 +2238,9 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
                     <LottieIcon name={extraIcon} width={36} height={36} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}/>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{e.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--fg-mute)', marginTop: 2 }}>+{e.tickets} билет{e.tickets > 1 ? 'а' : ''}{e.max ? ` · до ${e.max}` : ''}</div>
+                      <div style={{ fontSize: 11, color: 'var(--fg-mute)', marginTop: 2 }}>{e.max ? `до ${e.max} билетов` : 'бонусный билет'}</div>
                     </div>
-                    <iconify-icon icon="ph:caret-right-bold" width="14" height="14" style={{ display: 'inline-flex', color: 'var(--fg-dim)' }}/>
+                    <div className="lottery-extra-badge">+{e.tickets}</div>
                   </div>
                 );
               })}
@@ -2151,7 +2252,7 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
         <div className="lottery-verify-box">
           <LottieIcon name="lottery-verify" width={36} height={36} style={{ flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}/>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Commit-reveal verification</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Честный розыгрыш</div>
             <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 2 }}>
               Seed-hash зафиксирован: <code style={{ fontSize: 9.5, background: 'var(--bg-2)', padding: '1px 4px', borderRadius: 3 }}>{l.verifySeed}</code>
             </div>
@@ -2164,6 +2265,13 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
 
       {/* Sticky CTA */}
       <div className="lottery-detail-cta-wrap">
+        {!joined && (
+          <div className="lottery-cta-hint">
+            {allConditionsMet
+              ? `Всё готово · ${l.joined.toLocaleString('ru-RU')} участников${odds ? ` · твой шанс ~1 из ${odds}` : ''}`
+              : `Выполни условия: ${metCount} из ${l.conditions.length}`}
+          </div>
+        )}
         {joined ? (
           <button onClick={() => onJoin()} className="lottery-cta-btn lottery-cta-joined" style={{ background: 'var(--bg-2)', color: accent, border: `1px solid ${accent}` }}>
             <iconify-icon icon="ph:check-circle-duotone" width="18" height="18" style={{ display: 'inline-flex', marginRight: 6 }}/>
@@ -2173,7 +2281,7 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
           <button onClick={onJoin} disabled={!allConditionsMet}
             className={`lottery-cta-btn ${allConditionsMet ? 'lottery-cta-active' : 'lottery-cta-disabled'}`}
             style={{ '--cta-accent': l.accentColor }}>
-            {allConditionsMet ? '🎉 Участвовать в розыгрыше' : `Выполните условия (${l.conditions.filter(c => conditionsMet[c.target]).length}/${l.conditions.length})`}
+            {allConditionsMet ? '🎉 Участвовать в розыгрыше' : `Выполните условия (${metCount}/${l.conditions.length})`}
           </button>
         )}
       </div>
