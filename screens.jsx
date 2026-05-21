@@ -1763,6 +1763,41 @@ const LOTTERY_MOCK = [
     joined: 3201, maxWinners: 1, status: 'active', verifySeed: 'a1b2c3...d4e5',
   },
   {
+    id: 'finished-airpods',
+    type: 'community', title: 'Розыгрыш AirPods Pro 2', prize: 'Apple AirPods Pro 2 (USB-C)',
+    prizeIcon: '🎧', accentColor: '#5BE2D6',
+    ch: '@gadget_giveaway', channelTitle: 'Gadget Giveaway', channelEmoji: '🎧',
+    description: '🎧 Разыграли AirPods Pro 2 среди подписчиков канала!\n\nСпасибо всем за участие 🙌 Победителей выбрал случайный алгоритм.',
+    conditions: [{ type: 'subscribe', target: '@gadget_giveaway', label: 'Подписка на @gadget_giveaway' }],
+    extras: [],
+    deadline: 'завершён', deadlineMs: Date.now() - 2 * 86400000,
+    joined: 5840, maxWinners: 2, status: 'finished', verifySeed: 'c4e9a1...8b3d',
+    finishedAt: '19 мая 2026',
+    winners: [
+      { place: 1, name: 'Алексей П.', username: '@alex_petrov', userId: '184729301', ticket: '03914' },
+      { place: 2, name: 'Марина И.', username: '@marina_iv', userId: '672910445', ticket: '11820' },
+    ],
+  },
+  {
+    id: 'finished-stars',
+    type: 'community', title: 'Розыгрыш 5000 Stars', prize: '5 000 ⭐ Telegram Stars',
+    prizeIcon: '⭐', accentColor: '#FFCC00',
+    ch: '@fresh_super_app', channelTitle: 'Фрэш', channelEmoji: '✨',
+    description: '⭐ Разыграли 5 000 Telegram Stars!\n\nПобедители определены случайно и прозрачно. Поздравляем 🎉',
+    conditions: [{ type: 'subscribe', target: '@fresh_super_app', label: 'Подписка на @fresh_super_app' }],
+    extras: [],
+    deadline: 'завершён', deadlineMs: Date.now() - 6 * 86400000,
+    joined: 12480, maxWinners: 5, status: 'finished', verifySeed: 'a8f3e1...d29b',
+    finishedAt: '15 мая 2026',
+    winners: [
+      { place: 1, name: 'Дмитрий К.', username: '@dmitry_k', userId: '845120398', ticket: '00471' },
+      { place: 2, name: 'Елена С.', username: '@elena_sv', userId: '193847562', ticket: '09238' },
+      { place: 3, name: 'Иван М.', username: '@ivan_m', userId: '561029384', ticket: '04102' },
+      { place: 4, name: 'Ольга Т.', username: '@olga_t', userId: '720384918', ticket: '13947' },
+      { place: 5, name: 'Сергей В.', username: '@sergey_v', userId: '308475612', ticket: '02856' },
+    ],
+  },
+  {
     id: 'coca-cola-qr',
     type: 'brand-qr', title: 'Coca-Cola QR-конкурс', prize: 'Поездка на финал РФПЛ + мерч',
     prizeIcon: '🥤', accentColor: '#FF0000',
@@ -1955,22 +1990,19 @@ function LotteryModule({ accent = '#B8E641', myLotteries = [], setMyLotteries = 
   };
 
   if (subPage === 'detail' && current) {
+    if (current.status === 'finished') {
+      return <LotteryFinishedScreen lottery={current} accent={accent} onBack={goBack}/>;
+    }
     if (current.mine) {
       return <LotteryOwnerScreen lottery={current} accent={accent} onBack={goBack}
         onUpdate={(wd) => updateLottery(current.id, wd)}/>;
     }
     return <LotteryDetailScreen lottery={current} accent={accent} joined={!!joinedIds[current.id]}
       onBack={goBack}
-      onJoin={() => { markJoined(current.id); goTo('joined', current.id); }}
-      onViewWinners={() => goTo('winners', current.id)}/>;
+      onJoin={() => { markJoined(current.id); goTo('joined', current.id); }}/>;
   }
   if (subPage === 'joined' && current) {
     return <LotteryJoinedScreen lottery={current} accent={accent}
-      onBack={() => goTo('detail', current.id)}
-      onViewWinners={() => goTo('winners', current.id)}/>;
-  }
-  if (subPage === 'winners' && current) {
-    return <LotteryWinnersScreen lottery={current} accent={accent}
       onBack={() => goTo('detail', current.id)}/>;
   }
   if (subPage === 'create') {
@@ -2025,7 +2057,9 @@ function LotteryCard({ l, joined, endingSoon, onOpen }) {
       className={'lottery-card' + (endingSoon ? ' ending-soon' : '')}
       style={{ '--card-accent': l.accentColor }}>
       <div className="lottery-card-left">
-        <div className="lottery-card-prize-emoji">{l.prizeIcon}</div>
+        {l.bannerUrl
+          ? <img src={l.bannerUrl} alt="" className="lottery-card-banner"/>
+          : <div className="lottery-card-prize-emoji">{l.prizeIcon}</div>}
         {joined && <div className="lottery-card-joined-badge">✓</div>}
       </div>
       <div className="lottery-card-body">
@@ -2036,6 +2070,7 @@ function LotteryCard({ l, joined, endingSoon, onOpen }) {
             {PARTNER_TYPE_LABEL[l.type]}
           </span>
         </div>
+        <div className="lottery-card-name">{l.title}</div>
         <div className="lottery-card-prize">{l.prize}</div>
         <div className="lottery-card-meta">
           {endingSoon ? <HotTimer deadlineMs={l.deadlineMs}/> : (
@@ -2097,7 +2132,7 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
       </div>
 
       {/* Фильтры — всегда первыми */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 4, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
         <Chip active={filter === 'all'} onClick={() => setFilter('all')}>Все ({activeAll.length})</Chip>
         <Chip active={filter === 'created'} onClick={() => setFilter('created')}>Запущенные ({myLotteries.length})</Chip>
         <Chip active={filter === 'mine'} onClick={() => setFilter('mine')}>Мои подписки ({Object.keys(joinedIds).length})</Chip>
@@ -2249,7 +2284,7 @@ function LotteryJoinTicker({ joined }) {
   );
 }
 
-function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onViewWinners }) {
+function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin }) {
   const [conditionsMet, setConditionsMet] = React.useState({});
   const metCount = l.conditions.filter(c => conditionsMet[c.target]).length;
   const allConditionsMet = metCount === l.conditions.length;
@@ -2320,14 +2355,22 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
           {l.conditions.map((c, i) => {
             const met = !!conditionsMet[c.target];
             return (
-              <button key={i} onClick={() => setConditionsMet(s => ({ ...s, [c.target]: !s[c.target] }))}
+              <button key={i} onClick={() => {
+                  if (c.type === 'subscribe') {
+                    const u = String(c.target || '').replace(/^@/, '');
+                    if (u) window.open('https://t.me/' + u, '_blank');
+                  }
+                  setConditionsMet(s => ({ ...s, [c.target]: true }));
+                }}
                 className={`lottery-condition-item${met ? ' met' : ''}`}>
                 <div className="lottery-cond-avatar">
                   <iconify-icon icon={c.type === 'subscribe' ? 'ph:telegram-logo-fill' : 'ph:qr-code-bold'} width="17" height="17" style={{ display: 'inline-flex' }}/>
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 1 }}>{c.type === 'subscribe' ? 'Подписка на канал' : 'Сканировать QR-код'}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 1 }}>
+                    {met ? 'Отмечено · нажми, чтобы открыть' : c.type === 'subscribe' ? 'Нажми — откроется канал для подписки' : 'Сканировать QR-код'}
+                  </div>
                 </div>
                 <div className="lottery-condition-check" style={{ background: met ? accent : 'transparent', borderColor: met ? accent : 'var(--line-strong)' }}>
                   {met && <iconify-icon icon="ph:check-bold" width="12" height="12" style={{ display: 'inline-flex' }}/>}
@@ -2359,19 +2402,6 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
           </>
         )}
 
-        {/* Verification */}
-        <div className="lottery-verify-box">
-          <LottieIcon name="lottery-verify" width={36} height={36} style={{ flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}/>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Честный розыгрыш</div>
-            <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 2 }}>
-              Seed-hash зафиксирован: <code style={{ fontSize: 9.5, background: 'var(--bg-2)', padding: '1px 4px', borderRadius: 3 }}>{l.verifySeed}</code>
-            </div>
-          </div>
-          <button onClick={onViewWinners} style={{ background: 'transparent', border: 'none', color: accent, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-            Как это →
-          </button>
-        </div>
       </div>
 
       {/* Sticky CTA */}
@@ -2400,7 +2430,7 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin, onVie
   );
 }
 
-function LotteryJoinedScreen({ lottery: l, accent, onBack, onViewWinners }) {
+function LotteryJoinedScreen({ lottery: l, accent, onBack }) {
   const [ticketNum] = React.useState(() => Math.floor(Math.random() * 100000));
   const rolled = useCountUp(ticketNum, 1100);
   const odds = l.joined > 0 ? Math.max(1, Math.round(l.joined / Math.max(1, l.maxWinners))) : 0;
@@ -2487,106 +2517,76 @@ function LotteryJoinedScreen({ lottery: l, accent, onBack, onViewWinners }) {
           <span>Победителей объявим через {l.deadline} — пришлём уведомление в бот.</span>
         </div>
 
-        {/* Verify */}
-        <div className="lottery-verify-box" style={{ marginTop: 12 }}>
-          <iconify-icon icon="ph:shield-check-duotone" width="22" height="22" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Розыгрыш честный</div>
-            <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 2 }}>Победители по seed: <code style={{ fontSize: 9.5 }}>{l.verifySeed}</code></div>
-          </div>
-          <button onClick={onViewWinners} style={{ background: 'transparent', border: 'none', color: accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-            Подробнее →
-          </button>
-        </div>
       </div>
     </div>
   );
 }
 
-function LotteryWinnersScreen({ lottery: l, accent, onBack }) {
-  const winners = [
-    { name: 'А****й П.', ticket: '01284', country: 'RU' },
-    { name: 'М***я И.',  ticket: '04721', country: 'RU' },
-    { name: 'Д***н К.',  ticket: '08432', country: 'KZ' },
-    { name: 'Е***а С.',  ticket: '01092', country: 'RU' },
-    { name: 'И***н М.',  ticket: '06378', country: 'BY' },
-  ].slice(0, l.maxWinners);
-  const steps = [
-    { ic: 'ph:lock-key-duotone',    t: 'Commit',   d: 'Хэш секретного seed зафиксирован до старта' },
-    { ic: 'ph:users-three-duotone', t: 'Розыгрыш', d: 'Идёт сбор участников — seed скрыт от всех' },
-    { ic: 'ph:seal-check-duotone',  t: 'Reveal',   d: 'Seed раскрыт — расчёт может проверить каждый' },
-  ];
+// ─── Завершённый розыгрыш: пост канала + победители с ID ───
+function LotteryFinishedScreen({ lottery: l, accent, onBack }) {
+  const winners = l.winners || [];
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 100px' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 32px' }}>
       <div className="lottery-detail-topbar">
         <button onClick={onBack} className="lottery-back-btn">
           <iconify-icon icon="ph:caret-left-bold" width="18" height="18" style={{ display: 'inline-flex' }}/>
         </button>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-mute)' }}>Прозрачность</span>
-        <span style={{ width: 32 }}/>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-mute)' }}>Розыгрыш завершён</span>
+        <button onClick={() => window.toast && window.toast('Ссылка скопирована')} className="lottery-share-btn">
+          <iconify-icon icon="ph:share-network-duotone" width="16" height="16" style={{ display: 'inline-flex' }}/>
+        </button>
       </div>
 
-      <div style={{ padding: '18px 16px' }}>
-        {/* Hero explainer */}
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <LottieIcon name="lottery-verify" width={72} height={72} style={{ display: 'block', margin: '0 auto 8px' }}/>
-          <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.3 }}>Честный розыгрыш</div>
-          <div style={{ fontSize: 11.5, color: 'var(--fg-mute)', marginTop: 4, lineHeight: 1.5 }}>
-            Победителей выбирает не человек, а проверяемый алгоритм
+      <div style={{ padding: '16px 16px 0' }}>
+        {/* Пост канала */}
+        <div className="lottery-finished-post">
+          <div className="lottery-finished-post-head">
+            <span className="lottery-finished-post-ch">{l.channelEmoji} {l.ch}</span>
+            <span className="lottery-finished-post-status">🏁 Завершён</span>
+          </div>
+          {l.bannerUrl
+            ? <img src={l.bannerUrl} alt="" className="lottery-finished-post-banner"/>
+            : <div className="lottery-finished-post-emoji" style={{ '--hero-accent': l.accentColor }}>{l.prizeIcon}</div>}
+          <div className="lottery-finished-post-title">{l.title}</div>
+          <div className="lottery-finished-post-prize">🎁 {l.prize}</div>
+          {l.description && <div className="lottery-finished-post-desc">{l.description}</div>}
+          <div className="lottery-finished-post-meta">
+            <span>{l.joined.toLocaleString('ru-RU')} участников</span>
+            <span>·</span>
+            <span>{l.maxWinners} победителей</span>
+            {l.finishedAt && (<><span>·</span><span>{l.finishedAt}</span></>)}
           </div>
         </div>
 
-        {/* 3 steps commit-reveal */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {steps.map((s, i) => (
-            <div key={i} className="lottery-verify-step">
-              <div className="lottery-verify-step-num">{i + 1}</div>
-              <iconify-icon icon={s.ic} width="24" height="24" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{s.t}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--fg-mute)', marginTop: 1, lineHeight: 1.4 }}>{s.d}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Hash box */}
-        <div className="lottery-hash-box">
-          <div className="lottery-hash-head">
-            <span>Hash (commit)</span>
-            <button onClick={() => window.toast && window.toast('Хэш скопирован')} className="lottery-hash-copy">
-              <iconify-icon icon="ph:copy-duotone" width="13" height="13" style={{ display: 'inline-flex' }}/>
-              копировать
-            </button>
+        {/* Победители */}
+        <div className="lottery-section-title">Победители</div>
+        {winners.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {winners.map((w, i) => {
+              const medal = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : null;
+              return (
+                <div key={i} className={`lottery-winner-row${i === 0 ? ' winner-top' : ''}`}>
+                  <div className="lottery-winner-place" style={{ background: medal || 'var(--bg-2)', color: medal ? '#000' : 'var(--fg)' }}>
+                    {w.place || i + 1}
+                  </div>
+                  <div className="lottery-winner-avatar">{(w.name || '?').charAt(0)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
+                    <div className="lottery-winner-id">{w.username} · ID {w.userId}</div>
+                  </div>
+                  <div className="lottery-winner-ticket">#{w.ticket}</div>
+                </div>
+              );
+            })}
           </div>
-          <div className="lottery-hash-val">{l.verifySeed}</div>
-        </div>
+        ) : (
+          <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 12 }}>
+            Победители ещё не опубликованы
+          </div>
+        )}
 
-        {/* Winners */}
-        <div className="lottery-section-title">Победители (пример)</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {winners.map((w, i) => {
-            const medal = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : null;
-            return (
-              <div key={i} className={`lottery-winner-row${i === 0 ? ' winner-top' : ''}`}>
-                <div className="lottery-winner-place" style={{ background: medal || 'var(--bg-2)', color: medal ? '#000' : 'var(--fg)' }}>
-                  {i + 1}
-                </div>
-                <div className="lottery-winner-avatar">{w.name.charAt(0)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--fg-mute)' }}>Билет #{w.ticket} · {w.country}</div>
-                </div>
-                {i === 0
-                  ? <LottieIcon name="lottery-trophy" width={34} height={34} style={{ filter: 'drop-shadow(0 2px 6px rgba(255,215,0,0.5))' }}/>
-                  : <iconify-icon icon="ph:trophy-fill" width="16" height="16" style={{ display: 'inline-flex', color: 'var(--fg-dim)' }}/>}
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ marginTop: 16, padding: 12, background: 'var(--accent-soft)', borderRadius: 10, border: '1px solid var(--accent-line)', fontSize: 11, color: 'var(--fg)', lineHeight: 1.5 }}>
-          <b style={{ color: accent }}>Демо-данные.</b> В реальном розыгрыше победители появятся автоматически после reveal seed — расчёт сможет проверить любой.
+        <div style={{ marginTop: 14, padding: 12, background: 'var(--bg-1)', borderRadius: 10, border: '1px solid var(--line)', fontSize: 11, color: 'var(--fg-mute)', lineHeight: 1.5 }}>
+          Победителей выбрал случайный алгоритм среди всех участников. Список зафиксирован и неизменен.
         </div>
       </div>
     </div>
