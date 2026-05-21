@@ -1515,6 +1515,60 @@ button:active {
   font-family: var(--font-mono); flex-shrink: 0;
 }
 
+/* ─── Лента: поиск + Sheet «Фильтр» (v65) ─── */
+.lottery-search-row { display: flex; gap: 8px; margin: 8px 0 12px; }
+.lottery-search-box {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px;
+  padding: 8px 11px; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line);
+}
+.lottery-search-input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  font-family: inherit; font-size: 12.5px; color: var(--fg);
+}
+.lottery-search-input::placeholder { color: var(--fg-dim); }
+.lottery-search-clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bg-3); border: none; color: var(--fg-mute); cursor: pointer;
+}
+.lottery-filter-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 12px; border-radius: 10px; flex-shrink: 0;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--fg); font-family: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+}
+.lottery-filter-btn.has-active { border-color: var(--accent-line); color: var(--accent-strong); }
+.lottery-filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--accent); color: #000; font-size: 10px; font-weight: 800;
+}
+.lottery-filter-label {
+  font-size: 11px; font-weight: 700; color: var(--fg-mute);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;
+}
+.lottery-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lottery-filter-reset {
+  padding: 12px 16px; border-radius: 11px; flex-shrink: 0;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--fg-mute); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.lottery-filter-apply {
+  flex: 1; padding: 12px; border-radius: 11px;
+  background: var(--accent); border: none;
+  color: #000; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.lottery-results-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 2px 0 10px; font-size: 12px; font-weight: 700; color: var(--fg-mute);
+}
+.lottery-results-reset {
+  background: none; border: none; color: var(--accent-strong);
+  font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+
 /* Wizard */
 .wizard-stepper {
   display: flex; gap: 4px; padding: 6px 16px 8px;

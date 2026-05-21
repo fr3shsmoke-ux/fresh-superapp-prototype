@@ -1812,6 +1812,43 @@ const LOTTERY_MOCK = [
 const PARTNER_TYPE_LABEL = { partner: 'PARTNER', community: 'COMMUNITY', 'brand-qr': 'BRAND QR', mine: 'ВАШ' };
 const PARTNER_TYPE_COLOR = { partner: '#B8E641', community: '#5BE2D6', 'brand-qr': '#FF6B6B', mine: '#FFB85C' };
 
+// Категория / способ участия / сортировка — для Sheet «Фильтр» (v65).
+const LOTTERY_CATEGORIES = [
+  { id: 'tech',          label: 'Техника',  icon: '💻' },
+  { id: 'subscriptions', label: 'Подписки', icon: '🎬' },
+  { id: 'money',         label: 'Деньги',   icon: '⭐' },
+  { id: 'games',         label: 'Игры',     icon: '🎮' },
+  { id: 'merch',         label: 'Мерч',     icon: '🎁' },
+];
+const LOTTERY_CATEGORY = {
+  'spotify-12m': 'subscriptions', 'kinopoisk-6m': 'subscriptions', 'yandex-plus-12m': 'subscriptions',
+  'community-iphone': 'tech', 'community-apple-watch': 'tech', 'community-ps5': 'games',
+  'community-1m-stars': 'money', 'finished-airpods': 'tech', 'finished-stars': 'money',
+  'coca-cola-qr': 'merch', 'my-demo': 'tech',
+};
+const lotteryCat = (l) => l.category || LOTTERY_CATEGORY[l.id] || 'other';
+
+const LOTTERY_METHODS = [
+  { id: 'subscribe', label: 'Только подписка' },
+  { id: 'boost',     label: 'С бустами' },
+  { id: 'invite',    label: 'С приглашениями' },
+  { id: 'qr',        label: 'С QR-кодом' },
+];
+function lotteryHasMethod(l, m) {
+  const extras = l.extras || [];
+  const hasQr = (l.conditions || []).some(c => c.type === 'scan-qr');
+  if (m === 'subscribe') return extras.length === 0 && !hasQr;
+  if (m === 'qr') return hasQr;
+  return extras.some(e => e.type === m);
+}
+
+const LOTTERY_SORTS = [
+  { id: 'default', label: 'По умолчанию' },
+  { id: 'ending',  label: 'Скоро завершатся' },
+  { id: 'popular', label: 'Популярные' },
+  { id: 'winners', label: 'Больше победителей' },
+];
+
 // Относительный дедлайн «N дн M ч» из ISO-даты окончания.
 function relDeadline(endIso) {
   if (!endIso) return 'скоро';
@@ -2114,6 +2151,23 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
   const endingSoon = activeAll.filter(isSoon).sort((a, b) => a.deadlineMs - b.deadlineMs);
   const rest = activeAll.filter(l => l.type !== 'partner' && !isSoon(l));
 
+  // Sheet «Фильтр»: поиск / категория / способ участия / сортировка
+  const [query, setQuery] = React.useState('');
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const [sortBy, setSortBy] = React.useState('default');
+  const [cats, setCats] = React.useState([]);
+  const [methods, setMethods] = React.useState([]);
+  const q = query.trim().toLowerCase();
+  const contentActive = !!q || cats.length > 0 || methods.length > 0 || sortBy !== 'default';
+  const activeFilterCount = cats.length + methods.length + (sortBy !== 'default' ? 1 : 0);
+  let results = filtered.filter(l =>
+    (!q || (l.title + ' ' + l.prize + ' ' + l.ch).toLowerCase().includes(q))
+    && (cats.length === 0 || cats.includes(lotteryCat(l)))
+    && (methods.length === 0 || methods.some(m => lotteryHasMethod(l, m))));
+  if (sortBy === 'ending') results = [...results].sort((a, b) => (a.deadlineMs || 0) - (b.deadlineMs || 0));
+  else if (sortBy === 'popular') results = [...results].sort((a, b) => (b.joined || 0) - (a.joined || 0));
+  else if (sortBy === 'winners') results = [...results].sort((a, b) => (b.maxWinners || 0) - (a.maxWinners || 0));
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 90px', position: 'relative' }}>
       {/* Header — title + Create CTA */}
@@ -2139,8 +2193,46 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         <Chip active={filter === 'finished'} onClick={() => setFilter('finished')}>Завершённые</Chip>
       </div>
 
-      {/* Лента: секции (для «Все») либо плоский список (для остальных фильтров) */}
-      {isAll ? (
+      {/* Поиск + кнопка Sheet «Фильтр» */}
+      <div className="lottery-search-row">
+        <div className="lottery-search-box">
+          <iconify-icon icon="ph:magnifying-glass-bold" width="15" height="15" style={{ display: 'inline-flex', color: 'var(--fg-mute)', flexShrink: 0 }}/>
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Поиск по названию или каналу" className="lottery-search-input"/>
+          {query && (
+            <button onClick={() => setQuery('')} className="lottery-search-clear" aria-label="Очистить">
+              <iconify-icon icon="ph:x-bold" width="11" height="11" style={{ display: 'inline-flex' }}/>
+            </button>
+          )}
+        </div>
+        <button onClick={() => setFilterOpen(true)} className={'lottery-filter-btn' + (activeFilterCount ? ' has-active' : '')}>
+          <iconify-icon icon="ph:sliders-horizontal-bold" width="15" height="15" style={{ display: 'inline-flex' }}/>
+          Фильтр
+          {activeFilterCount > 0 && <span className="lottery-filter-badge">{activeFilterCount}</span>}
+        </button>
+      </div>
+
+      {/* Лента: результаты фильтра / секции «Все» / плоский список */}
+      {contentActive ? (
+        <>
+          <div className="lottery-results-head">
+            <span>Найдено: {results.length}</span>
+            {activeFilterCount > 0 && (
+              <button onClick={() => { setSortBy('default'); setCats([]); setMethods([]); }} className="lottery-results-reset">
+                сбросить фильтр
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {results.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
+            {results.length === 0 && (
+              <div style={{ padding: 30, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 13 }}>
+                Ничего не найдено — измени запрос или фильтр
+              </div>
+            )}
+          </div>
+        </>
+      ) : isAll ? (
         <>
           {/* Спонсорские — оплаченное промо-размещение (детально проработаем позже) */}
           {sponsor.length > 0 && (
@@ -2206,6 +2298,49 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         <iconify-icon icon="ph:shield-check-duotone" width="16" height="16" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
         <span>Все розыгрыши проходят commit-reveal verification. Победители выбираются прозрачно — seed публикуется заранее.</span>
       </div>
+
+      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Фильтр и сортировка">
+        <div style={{ padding: '2px 0 14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div className="lottery-filter-label">Сортировка</div>
+            <div className="lottery-filter-chips">
+              {LOTTERY_SORTS.map(s => (
+                <Chip key={s.id} active={sortBy === s.id} onClick={() => setSortBy(s.id)}>{s.label}</Chip>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="lottery-filter-label">Категория приза</div>
+            <div className="lottery-filter-chips">
+              {LOTTERY_CATEGORIES.map(c => (
+                <Chip key={c.id} active={cats.includes(c.id)}
+                  onClick={() => setCats(x => x.includes(c.id) ? x.filter(i => i !== c.id) : [...x, c.id])}>
+                  {c.icon} {c.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="lottery-filter-label">Способ участия</div>
+            <div className="lottery-filter-chips">
+              {LOTTERY_METHODS.map(m => (
+                <Chip key={m.id} active={methods.includes(m.id)}
+                  onClick={() => setMethods(x => x.includes(m.id) ? x.filter(i => i !== m.id) : [...x, m.id])}>
+                  {m.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { setSortBy('default'); setCats([]); setMethods([]); }} className="lottery-filter-reset">
+              Сбросить
+            </button>
+            <button onClick={() => setFilterOpen(false)} className="lottery-filter-apply">
+              Показать {results.length}
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }
