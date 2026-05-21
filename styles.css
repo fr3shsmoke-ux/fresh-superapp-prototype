@@ -1569,6 +1569,28 @@ button:active {
   font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
 }
 
+/* Сегмент-контрол фильтров ленты */
+.lottery-seg-control {
+  display: flex; gap: 2px; margin-bottom: 4px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 3px;
+}
+.lottery-seg {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 6px 4px; border-radius: 9px;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  transition: background 0.15s ease;
+}
+.lottery-seg-label {
+  font-size: 10.5px; font-weight: 600; color: var(--fg-mute);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.lottery-seg-count { font-size: 13px; font-weight: 800; color: var(--fg); }
+.lottery-seg.active { background: var(--accent-soft); }
+.lottery-seg.active .lottery-seg-label,
+.lottery-seg.active .lottery-seg-count { color: var(--accent-strong); }
+
 /* Wizard */
 .wizard-stepper {
   display: flex; gap: 4px; padding: 6px 16px 8px;

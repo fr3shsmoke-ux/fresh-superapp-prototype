@@ -2185,12 +2185,20 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         </button>
       </div>
 
-      {/* Фильтры — всегда первыми */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
-        <Chip active={filter === 'all'} onClick={() => setFilter('all')}>Все ({activeAll.length})</Chip>
-        <Chip active={filter === 'created'} onClick={() => setFilter('created')}>Запущенные ({myLotteries.length})</Chip>
-        <Chip active={filter === 'mine'} onClick={() => setFilter('mine')}>Мои подписки ({Object.keys(joinedIds).length})</Chip>
-        <Chip active={filter === 'finished'} onClick={() => setFilter('finished')}>Завершённые</Chip>
+      {/* Фильтры — сегмент-контрол в один ряд */}
+      <div className="lottery-seg-control">
+        {[
+          { id: 'all',      label: 'Все',         count: activeAll.length },
+          { id: 'created',  label: 'Запущенные',  count: myLotteries.length },
+          { id: 'mine',     label: 'Подписки',    count: Object.keys(joinedIds).length },
+          { id: 'finished', label: 'Завершённые', count: LOTTERY_MOCK.filter(l => l.status === 'finished' || l.status === 'wave3-placeholder').length },
+        ].map(s => (
+          <button key={s.id} onClick={() => setFilter(s.id)}
+            className={'lottery-seg' + (filter === s.id ? ' active' : '')}>
+            <span className="lottery-seg-label">{s.label}</span>
+            <span className="lottery-seg-count">{s.count}</span>
+          </button>
+        ))}
       </div>
 
       {/* Поиск + кнопка Sheet «Фильтр» */}
