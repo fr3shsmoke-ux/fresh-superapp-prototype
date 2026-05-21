@@ -2098,15 +2098,14 @@ function useCountUp(target, dur = 900) {
   const [n, setN] = React.useState(0);
   React.useEffect(() => {
     if (!target) { setN(0); return; }
-    let raf, t0 = null;
-    const tick = (t) => {
-      if (t0 === null) t0 = t;
-      const p = Math.min(1, (t - t0) / dur);
+    const start = Date.now();
+    setN(0);
+    const iv = setInterval(() => {
+      const p = Math.min(1, (Date.now() - start) / dur);
       setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+      if (p >= 1) clearInterval(iv);
+    }, 40);
+    return () => clearInterval(iv);
   }, [target]);
   return n;
 }
