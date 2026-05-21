@@ -2001,7 +2001,8 @@ function HotTimer({ deadlineMs }) {
     : `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return (
     <span className="lottery-card-timer-hot">
-      <iconify-icon icon="ph:fire-fill" width="12" height="12" className="lottery-timer-flame"/>
+      <iconify-icon icon="ph:fire-fill" width="12" height="12"
+        style={{ display: 'inline-flex', color: '#FFD9A0', transformOrigin: '50% 80%', animation: 'timer-flame-flicker 0.9s ease-in-out infinite' }}/>
       {text}
     </span>
   );
@@ -2010,7 +2011,8 @@ function HotTimer({ deadlineMs }) {
 function FeedSection({ icon, title, hint, fire }) {
   return (
     <div className={'lottery-feed-section' + (fire ? ' fire' : '')}>
-      <iconify-icon icon={icon} width="14" height="14" className="lottery-feed-section-icon"/>
+      <iconify-icon icon={icon} width="14" height="14"
+        style={{ display: 'inline-flex', color: fire ? '#FF5A3C' : 'var(--fg-mute)' }}/>
       <span className="lottery-feed-section-title">{title}</span>
       {hint && <span className="lottery-feed-section-hint">{hint}</span>}
     </div>

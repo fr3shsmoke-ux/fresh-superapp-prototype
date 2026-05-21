@@ -1109,13 +1109,11 @@ button:active {
   display: flex; align-items: center; gap: 6px;
   margin: 18px 0 10px;
 }
-.lottery-feed-section-icon { color: var(--fg-mute); display: inline-flex; }
 .lottery-feed-section-title {
   font-size: 12px; font-weight: 800; letter-spacing: 0.4px;
   text-transform: uppercase; color: var(--fg);
 }
 .lottery-feed-section-hint { font-size: 10px; color: var(--fg-dim); font-weight: 600; }
-.lottery-feed-section.fire .lottery-feed-section-icon { color: #FF5A3C; }
 .lottery-feed-section.fire .lottery-feed-section-title { color: #FF7A52; }
 
 .lottery-card.ending-soon { border-color: rgba(255, 90, 60, 0.34); }
@@ -1133,11 +1131,6 @@ button:active {
 }
 .lottery-card-timer-hot.ended {
   background: var(--bg-3); color: var(--fg-mute); animation: none;
-}
-.lottery-timer-flame {
-  display: inline-flex; color: #FFD9A0;
-  transform-origin: 50% 80%;
-  animation: timer-flame-flicker 0.9s ease-in-out infinite;
 }
 @keyframes timer-hot-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 60, 0.0); }
