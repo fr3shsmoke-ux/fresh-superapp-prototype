@@ -1104,6 +1104,50 @@ button:active {
 .lottery-card-meta { display: flex; gap: 9px; font-size: 10.5px; color: var(--fg-dim); }
 .lottery-card-meta-item { display: inline-flex; align-items: center; }
 
+/* ─── Лента: секции + огненный таймер (v63) ─── */
+.lottery-feed-section {
+  display: flex; align-items: center; gap: 6px;
+  margin: 18px 0 10px;
+}
+.lottery-feed-section-icon { color: var(--fg-mute); display: inline-flex; }
+.lottery-feed-section-title {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.4px;
+  text-transform: uppercase; color: var(--fg);
+}
+.lottery-feed-section-hint { font-size: 10px; color: var(--fg-dim); font-weight: 600; }
+.lottery-feed-section.fire .lottery-feed-section-icon { color: #FF5A3C; }
+.lottery-feed-section.fire .lottery-feed-section-title { color: #FF7A52; }
+
+.lottery-card.ending-soon { border-color: rgba(255, 90, 60, 0.34); }
+.lottery-card.ending-soon .lottery-card-left {
+  box-shadow: inset 0 0 18px rgba(255, 90, 60, 0.20);
+}
+.lottery-card-timer-hot {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px;
+  color: #FFE4D8;
+  background: linear-gradient(135deg, #FF5A3C 0%, #DC3318 100%);
+  animation: timer-hot-pulse 1.8s ease-in-out infinite;
+}
+.lottery-card-timer-hot.ended {
+  background: var(--bg-3); color: var(--fg-mute); animation: none;
+}
+.lottery-timer-flame {
+  display: inline-flex; color: #FFD9A0;
+  transform-origin: 50% 80%;
+  animation: timer-flame-flicker 0.9s ease-in-out infinite;
+}
+@keyframes timer-hot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 60, 0.0); }
+  50%      { box-shadow: 0 0 9px 1px rgba(255, 90, 60, 0.6); }
+}
+@keyframes timer-flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-4deg); opacity: 0.85; }
+  50%      { transform: scale(1.2) rotate(4deg); opacity: 1; }
+}
+
 /* Detail screen */
 .lottery-detail-topbar {
   display: flex; align-items: center; justify-content: space-between;

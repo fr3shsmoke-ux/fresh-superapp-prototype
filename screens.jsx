@@ -1736,8 +1736,31 @@ const LOTTERY_MOCK = [
       { type: 'subscribe', target: '@fresh_super_app', label: 'Подпишись на @fresh_super_app' },
     ],
     extras: [],
-    deadline: '2 дн', deadlineMs: Date.now() + 2 * 24 * 3600 * 1000,
+    deadline: '9 ч', deadlineMs: Date.now() + 9 * 3600 * 1000,
     joined: 376, maxWinners: 10, status: 'active', verifySeed: 'e2c8f4...a1d7',
+  },
+  {
+    id: 'community-apple-watch',
+    type: 'community', title: 'Apple Watch S10', prize: 'Apple Watch Series 10 46mm',
+    prizeIcon: '⌚', accentColor: '#5BE3F2',
+    ch: '@gadget_daily', channelTitle: 'Gadget Daily', channelEmoji: '⌚',
+    conditions: [{ type: 'subscribe', target: '@gadget_daily', label: 'Подпишись на @gadget_daily' }],
+    extras: [{ type: 'invite', label: 'Пригласи друга — +1 билет', tickets: 1, max: 10 }],
+    deadline: '1 дн 9 ч', deadlineMs: Date.now() + 33 * 3600 * 1000,
+    joined: 1547, maxWinners: 3, status: 'active', verifySeed: 'f5a2c9...3e1b',
+  },
+  {
+    id: 'community-ps5',
+    type: 'community', title: 'PlayStation 5', prize: 'PlayStation 5 Slim + 2 игры',
+    prizeIcon: '🎮', accentColor: '#A8D63A',
+    ch: '@game_zone', channelTitle: 'Game Zone', channelEmoji: '🎮',
+    conditions: [
+      { type: 'subscribe', target: '@game_zone', label: 'Подпишись на @game_zone' },
+      { type: 'subscribe', target: '@fresh_super_app', label: 'Подпишись на @fresh_super_app' },
+    ],
+    extras: [{ type: 'invite', label: 'Пригласи друга', tickets: 1, max: 15 }],
+    deadline: '6 дн', deadlineMs: Date.now() + 6 * 24 * 3600 * 1000,
+    joined: 3201, maxWinners: 1, status: 'active', verifySeed: 'a1b2c3...d4e5',
   },
   {
     id: 'coca-cola-qr',
@@ -1960,6 +1983,79 @@ function LotteryModule({ accent = '#B8E641', myLotteries = [], setMyLotteries = 
     onCreate={() => goTo('create')}/>;
 }
 
+// ─── Лента розыгрышей: огненный таймер участия + секции (v63) ───
+function HotTimer({ deadlineMs }) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const diff = Math.max(0, (deadlineMs || 0) - now);
+  if (diff === 0) return <span className="lottery-card-timer-hot ended">Завершён</span>;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const text = d > 0
+    ? `${d} дн ${h} ч`
+    : `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return (
+    <span className="lottery-card-timer-hot">
+      <iconify-icon icon="ph:fire-fill" width="12" height="12" className="lottery-timer-flame"/>
+      {text}
+    </span>
+  );
+}
+
+function FeedSection({ icon, title, hint, fire }) {
+  return (
+    <div className={'lottery-feed-section' + (fire ? ' fire' : '')}>
+      <iconify-icon icon={icon} width="14" height="14" className="lottery-feed-section-icon"/>
+      <span className="lottery-feed-section-title">{title}</span>
+      {hint && <span className="lottery-feed-section-hint">{hint}</span>}
+    </div>
+  );
+}
+
+function LotteryCard({ l, joined, endingSoon, onOpen }) {
+  return (
+    <button onClick={() => onOpen(l.id)}
+      className={'lottery-card' + (endingSoon ? ' ending-soon' : '')}
+      style={{ '--card-accent': l.accentColor }}>
+      <div className="lottery-card-left">
+        <div className="lottery-card-prize-emoji">{l.prizeIcon}</div>
+        {joined && <div className="lottery-card-joined-badge">✓</div>}
+      </div>
+      <div className="lottery-card-body">
+        <div className="lottery-card-channel">
+          <span className="lottery-card-channel-emoji">{l.channelEmoji}</span>
+          <span>{l.ch}</span>
+          <span className="lottery-card-type-badge" style={{ background: PARTNER_TYPE_COLOR[l.type] + '22', color: PARTNER_TYPE_COLOR[l.type] }}>
+            {PARTNER_TYPE_LABEL[l.type]}
+          </span>
+        </div>
+        <div className="lottery-card-prize">{l.prize}</div>
+        <div className="lottery-card-meta">
+          {endingSoon ? <HotTimer deadlineMs={l.deadlineMs}/> : (
+            <span className="lottery-card-meta-item">
+              <iconify-icon icon="ph:clock-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
+              {l.deadline}
+            </span>
+          )}
+          <span className="lottery-card-meta-item">
+            <iconify-icon icon="ph:users-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
+            {l.joined.toLocaleString('ru-RU')}
+          </span>
+          <span className="lottery-card-meta-item">
+            <iconify-icon icon="ph:trophy-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
+            {l.maxWinners} поб.
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, setFilter, onOpen, onCreate }) {
   const mockActive = LOTTERY_MOCK.filter(l => l.status === 'active');
   const activeAll = [...myLotteries, ...mockActive];
@@ -1967,8 +2063,19 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
                  : filter === 'created' ? myLotteries
                  : filter === 'finished' ? LOTTERY_MOCK.filter(l => l.status === 'finished' || l.status === 'wave3-placeholder')
                  : activeAll;
-  const featured = mockActive[0];
   const totalLive = activeAll.length;
+  const isAll = filter === 'all';
+
+  // Секции ленты: спонсорские → скоро завершатся → остальные
+  const SOON_MS = 48 * 3600 * 1000;
+  const soonNow = Date.now();
+  const isSoon = (l) => l.status === 'active' && l.type !== 'partner'
+    && l.deadlineMs && (l.deadlineMs - soonNow) < SOON_MS;
+  const sponsor = activeAll.filter(l => l.type === 'partner');
+  const featured = sponsor[0];
+  const sponsorRest = sponsor.slice(1);
+  const endingSoon = activeAll.filter(isSoon).sort((a, b) => a.deadlineMs - b.deadlineMs);
+  const rest = activeAll.filter(l => l.type !== 'partner' && !isSoon(l));
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 90px', position: 'relative' }}>
@@ -1987,73 +2094,76 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         </button>
       </div>
 
-      {/* Featured hero banner */}
-      {featured && (
-        <button onClick={() => onOpen(featured.id)} className="lottery-hero-banner" style={{ '--hero-accent': featured.accentColor }}>
-          <div className="lottery-hero-glow"/>
-          <div className="lottery-hero-content">
-            <div className="lottery-hero-badge">🔥 FEATURED</div>
-            <div className="lottery-hero-prize-emoji">{featured.prizeIcon}</div>
-            <div className="lottery-hero-prize-text">{featured.prize}</div>
-            <div className="lottery-hero-meta">
-              <span className="lottery-hero-channel">{featured.channelEmoji} {featured.ch}</span>
-              <span className="lottery-hero-countdown">⏰ {featured.deadline}</span>
-            </div>
-            <div className="lottery-hero-cta">Участвовать → {featured.joined.toLocaleString('ru-RU')} уже</div>
-          </div>
-        </button>
-      )}
-
-      {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, marginTop: 14, overflowX: 'auto' }}>
+      {/* Фильтры — всегда первыми */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 4, overflowX: 'auto' }}>
         <Chip active={filter === 'all'} onClick={() => setFilter('all')}>Все ({activeAll.length})</Chip>
         <Chip active={filter === 'created'} onClick={() => setFilter('created')}>Запущенные ({myLotteries.length})</Chip>
         <Chip active={filter === 'mine'} onClick={() => setFilter('mine')}>Мои подписки ({Object.keys(joinedIds).length})</Chip>
         <Chip active={filter === 'finished'} onClick={() => setFilter('finished')}>Завершённые</Chip>
       </div>
 
-      {/* Cards list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map((l) => (
-          <button key={l.id} onClick={() => onOpen(l.id)} className="lottery-card" style={{ '--card-accent': l.accentColor }}>
-            <div className="lottery-card-left">
-              <div className="lottery-card-prize-emoji">{l.prizeIcon}</div>
-              {joinedIds[l.id] && <div className="lottery-card-joined-badge">✓</div>}
-            </div>
-            <div className="lottery-card-body">
-              <div className="lottery-card-channel">
-                <span className="lottery-card-channel-emoji">{l.channelEmoji}</span>
-                <span>{l.ch}</span>
-                <span className="lottery-card-type-badge" style={{ background: PARTNER_TYPE_COLOR[l.type] + '22', color: PARTNER_TYPE_COLOR[l.type] }}>
-                  {PARTNER_TYPE_LABEL[l.type]}
-                </span>
+      {/* Лента: секции (для «Все») либо плоский список (для остальных фильтров) */}
+      {isAll ? (
+        <>
+          {/* Спонсорские — оплаченное промо-размещение (детально проработаем позже) */}
+          {sponsor.length > 0 && (
+            <>
+              <FeedSection icon="ph:seal-check-duotone" title="Спонсорские" hint="промо-размещение"/>
+              {featured && (
+                <button onClick={() => onOpen(featured.id)} className="lottery-hero-banner" style={{ '--hero-accent': featured.accentColor }}>
+                  <div className="lottery-hero-glow"/>
+                  <div className="lottery-hero-content">
+                    <div className="lottery-hero-badge">🔥 FEATURED</div>
+                    <div className="lottery-hero-prize-emoji">{featured.prizeIcon}</div>
+                    <div className="lottery-hero-prize-text">{featured.prize}</div>
+                    <div className="lottery-hero-meta">
+                      <span className="lottery-hero-channel">{featured.channelEmoji} {featured.ch}</span>
+                      <span className="lottery-hero-countdown">⏰ {featured.deadline}</span>
+                    </div>
+                    <div className="lottery-hero-cta">Участвовать → {featured.joined.toLocaleString('ru-RU')} уже</div>
+                  </div>
+                </button>
+              )}
+              {sponsorRest.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                  {sponsorRest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} onOpen={onOpen}/>)}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Скоро завершатся — огненный таймер */}
+          {endingSoon.length > 0 && (
+            <>
+              <FeedSection icon="ph:fire-duotone" title="Скоро завершатся" hint="успей вступить" fire/>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {endingSoon.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon onOpen={onOpen}/>)}
               </div>
-              <div className="lottery-card-prize">{l.prize}</div>
-              <div className="lottery-card-meta">
-                <span className="lottery-card-meta-item">
-                  <iconify-icon icon="ph:clock-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
-                  {l.deadline}
-                </span>
-                <span className="lottery-card-meta-item">
-                  <iconify-icon icon="ph:users-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
-                  {l.joined.toLocaleString('ru-RU')}
-                </span>
-                <span className="lottery-card-meta-item">
-                  <iconify-icon icon="ph:trophy-duotone" width="11" height="11" style={{ display: 'inline-flex', marginRight: 3 }}/>
-                  {l.maxWinners} поб.
-                </span>
+            </>
+          )}
+
+          {/* Остальные */}
+          {rest.length > 0 && (
+            <>
+              <FeedSection icon="ph:gift-duotone" title="Все розыгрыши"/>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {rest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} onOpen={onOpen}/>)}
               </div>
+            </>
+          )}
+        </>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+          {filtered.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
+          {filtered.length === 0 && (
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 13 }}>
+              {filter === 'mine' ? 'Вы пока не участвуете ни в одном розыгрыше'
+                : filter === 'created' ? 'Вы пока не запускали розыгрышей. Нажмите «Создать».'
+                : 'Здесь пока ничего нет'}
             </div>
-          </button>
-        ))}
-        {filtered.length === 0 && (
-          <div style={{ padding: 30, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 13 }}>
-            {filter === 'mine' ? 'Вы пока не участвуете ни в одном розыгрыше'
-              : filter === 'created' ? 'Вы пока не запускали розыгрышей. Нажмите «Создать».'
-              : 'Здесь пока ничего нет'}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className="module-stub-note" style={{ marginTop: 16 }}>
         <iconify-icon icon="ph:shield-check-duotone" width="16" height="16" style={{ display: 'inline-flex', color: accent, flexShrink: 0 }}/>
