@@ -1591,6 +1591,23 @@ button:active {
 .lottery-seg.active .lottery-seg-label,
 .lottery-seg.active .lottery-seg-count { color: var(--accent-strong); }
 
+/* Список сортировки в Sheet «Фильтр» (v67) */
+.lottery-sort-list {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--line); border-radius: 11px; overflow: hidden;
+}
+.lottery-sort-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 13px; background: var(--bg-1); border: none;
+  border-bottom: 1px solid var(--line);
+  font-family: inherit; font-size: 13px; color: var(--fg);
+  cursor: pointer; text-align: left;
+}
+.lottery-sort-row:last-child { border-bottom: none; }
+.lottery-sort-row.active {
+  background: var(--accent-soft); color: var(--accent-strong); font-weight: 700;
+}
+
 /* Wizard */
 .wizard-stepper {
   display: flex; gap: 4px; padding: 6px 16px 8px;

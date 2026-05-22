@@ -1828,6 +1828,22 @@ const LOTTERY_CATEGORY = {
 };
 const lotteryCat = (l) => l.category || LOTTERY_CATEGORY[l.id] || 'other';
 
+// Дата публикации розыгрыша — для сортировки «Новые сверху».
+const LOTTERY_CREATED = {
+  'community-apple-watch': Date.now() - 4 * 3600 * 1000,
+  'community-1m-stars':    Date.now() - 1 * 86400000,
+  'spotify-12m':           Date.now() - 2 * 86400000,
+  'yandex-plus-12m':       Date.now() - 3 * 86400000,
+  'community-ps5':         Date.now() - 4 * 86400000,
+  'kinopoisk-6m':          Date.now() - 5 * 86400000,
+  'community-iphone':      Date.now() - 7 * 86400000,
+  'my-demo':               Date.now() - 6 * 3600 * 1000,
+  'finished-airpods':      Date.now() - 12 * 86400000,
+  'finished-stars':        Date.now() - 18 * 86400000,
+  'coca-cola-qr':          Date.now() - 8 * 86400000,
+};
+const lotteryCreated = (l) => l.createdMs || LOTTERY_CREATED[l.id] || 0;
+
 const LOTTERY_METHODS = [
   { id: 'subscribe', label: 'Только подписка' },
   { id: 'boost',     label: 'С бустами' },
@@ -1844,7 +1860,9 @@ function lotteryHasMethod(l, m) {
 
 const LOTTERY_SORTS = [
   { id: 'default', label: 'По умолчанию' },
+  { id: 'new',     label: 'Новые сверху' },
   { id: 'ending',  label: 'Скоро завершатся' },
+  { id: 'chance',  label: 'Выше шанс на победу' },
   { id: 'popular', label: 'Популярные' },
   { id: 'winners', label: 'Больше победителей' },
 ];
@@ -1905,6 +1923,7 @@ function wizardToLottery(data) {
     joined: 0,
     maxWinners: data.winners || 1,
     status: 'active',
+    createdMs: Date.now(),
     verifySeed: seed,
     mine: true,
     wizardData: { ...data },   // снимок мастера — для вкладки «Пост» (PreviewCard)
@@ -2164,7 +2183,9 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
     (!q || (l.title + ' ' + l.prize + ' ' + l.ch).toLowerCase().includes(q))
     && (cats.length === 0 || cats.includes(lotteryCat(l)))
     && (methods.length === 0 || methods.some(m => lotteryHasMethod(l, m))));
-  if (sortBy === 'ending') results = [...results].sort((a, b) => (a.deadlineMs || 0) - (b.deadlineMs || 0));
+  if (sortBy === 'new') results = [...results].sort((a, b) => lotteryCreated(b) - lotteryCreated(a));
+  else if (sortBy === 'ending') results = [...results].sort((a, b) => (a.deadlineMs || 0) - (b.deadlineMs || 0));
+  else if (sortBy === 'chance') results = [...results].sort((a, b) => (a.joined / Math.max(1, a.maxWinners)) - (b.joined / Math.max(1, b.maxWinners)));
   else if (sortBy === 'popular') results = [...results].sort((a, b) => (b.joined || 0) - (a.joined || 0));
   else if (sortBy === 'winners') results = [...results].sort((a, b) => (b.maxWinners || 0) - (a.maxWinners || 0));
 
@@ -2311,9 +2332,13 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         <div style={{ padding: '2px 0 14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <div className="lottery-filter-label">Сортировка</div>
-            <div className="lottery-filter-chips">
+            <div className="lottery-sort-list">
               {LOTTERY_SORTS.map(s => (
-                <Chip key={s.id} active={sortBy === s.id} onClick={() => setSortBy(s.id)}>{s.label}</Chip>
+                <button key={s.id} onClick={() => setSortBy(s.id)}
+                  className={'lottery-sort-row' + (sortBy === s.id ? ' active' : '')}>
+                  <span>{s.label}</span>
+                  {sortBy === s.id && <iconify-icon icon="ph:check-bold" width="15" height="15" style={{ display: 'inline-flex' }}/>}
+                </button>
               ))}
             </div>
           </div>
