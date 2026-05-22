@@ -2023,13 +2023,18 @@ const DEMO_MY_LOTTERY = {
 function LotteryModule({ accent = '#B8E641', myLotteries = [], setMyLotteries = () => {} }) {
   const [subPage, setSubPage] = React.useState('feed');
   const [currentId, setCurrentId] = React.useState(null);
-  const [joinedIds, setJoinedIds] = React.useState({});
+  // joinedIds: { lotteryId: ticketString }. Предзаполнено 2 завершёнными — демо результата участия.
+  const [joinedIds, setJoinedIds] = React.useState(() => ({ 'finished-stars': '00471', 'finished-airpods': '55555' }));
+  const [remindIds, setRemindIds] = React.useState({});
+  const [savedIds, setSavedIds] = React.useState({});
   const [feedFilter, setFeedFilter] = React.useState('all');
 
   const goTo = (page, id = null) => { setSubPage(page); setCurrentId(id); };
   const goBack = () => { setSubPage('feed'); setCurrentId(null); };
   const current = [...myLotteries, ...LOTTERY_MOCK].find(l => l.id === currentId);
-  const markJoined = (id) => setJoinedIds(j => ({ ...j, [id]: true }));
+  const markJoined = (id) => setJoinedIds(j => j[id] ? j : ({ ...j, [id]: String(10000 + Math.floor(Math.random() * 89999)) }));
+  const toggleRemind = (id) => setRemindIds(r => ({ ...r, [id]: !r[id] }));
+  const toggleSaved = (id) => setSavedIds(s => ({ ...s, [id]: !s[id] }));
 
   // «Опубликовать» в мастере → конвертируем data → розыгрыш, добавляем в свои,
   // открываем ленту на фильтре «Запущенные».
@@ -2047,27 +2052,29 @@ function LotteryModule({ accent = '#B8E641', myLotteries = [], setMyLotteries = 
 
   if (subPage === 'detail' && current) {
     if (current.status === 'finished') {
-      return <LotteryFinishedScreen lottery={current} accent={accent} onBack={goBack}/>;
+      return <LotteryFinishedScreen lottery={current} accent={accent} myTicket={joinedIds[current.id]} onBack={goBack}/>;
     }
     if (current.mine) {
       return <LotteryOwnerScreen lottery={current} accent={accent} onBack={goBack}
         onUpdate={(wd) => updateLottery(current.id, wd)}/>;
     }
     return <LotteryDetailScreen lottery={current} accent={accent} joined={!!joinedIds[current.id]}
+      reminded={!!remindIds[current.id]} onToggleRemind={() => toggleRemind(current.id)}
+      saved={!!savedIds[current.id]} onToggleSave={() => toggleSaved(current.id)}
       onBack={goBack}
       onJoin={() => { markJoined(current.id); goTo('joined', current.id); }}/>;
   }
   if (subPage === 'joined' && current) {
-    return <LotteryJoinedScreen lottery={current} accent={accent}
+    return <LotteryJoinedScreen lottery={current} accent={accent} ticket={joinedIds[current.id]}
       onBack={() => goTo('detail', current.id)}/>;
   }
   if (subPage === 'create') {
     return <LotteryCreateWizard accent={accent} onClose={goBack} onPublish={publish}/>;
   }
   // default: feed
-  return <LotteryFeedScreen accent={accent} joinedIds={joinedIds} myLotteries={myLotteries}
+  return <LotteryFeedScreen accent={accent} joinedIds={joinedIds} savedIds={savedIds} myLotteries={myLotteries}
     filter={feedFilter} setFilter={setFeedFilter}
-    onOpen={(id) => goTo('detail', id)}
+    onOpen={(id) => goTo('detail', id)} onToggleSave={toggleSaved}
     onCreate={() => goTo('create')}/>;
 }
 
@@ -2107,11 +2114,18 @@ function FeedSection({ icon, title, hint, fire }) {
   );
 }
 
-function LotteryCard({ l, joined, endingSoon, onOpen }) {
+function LotteryCard({ l, joined, endingSoon, saved, onToggleSave, onOpen }) {
   return (
     <button onClick={() => onOpen(l.id)}
       className={'lottery-card' + (endingSoon ? ' ending-soon' : '')}
       style={{ '--card-accent': l.accentColor }}>
+      {onToggleSave && (
+        <span className={'lottery-card-save' + (saved ? ' saved' : '')}
+          role="button" aria-label="В закладки"
+          onClick={(e) => { e.stopPropagation(); onToggleSave(l.id); }}>
+          <iconify-icon icon={saved ? 'ph:star-fill' : 'ph:star-bold'} width="15" height="15" style={{ display: 'inline-flex' }}/>
+        </span>
+      )}
       <div className="lottery-card-left">
         {l.bannerUrl
           ? <img src={l.bannerUrl} alt="" className="lottery-card-banner"/>
@@ -2119,7 +2133,7 @@ function LotteryCard({ l, joined, endingSoon, onOpen }) {
         {joined && <div className="lottery-card-joined-badge">✓</div>}
       </div>
       <div className="lottery-card-body">
-        <div className="lottery-card-channel">
+        <div className="lottery-card-channel" style={{ paddingRight: 20 }}>
           <span className="lottery-card-channel-emoji">{l.channelEmoji}</span>
           <span>{l.ch}</span>
           <span className="lottery-card-type-badge" style={{ background: PARTNER_TYPE_COLOR[l.type] + '22', color: PARTNER_TYPE_COLOR[l.type] }}>
@@ -2149,10 +2163,39 @@ function LotteryCard({ l, joined, endingSoon, onOpen }) {
   );
 }
 
-function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, setFilter, onOpen, onCreate }) {
+// Карточка «Мои билеты» — номер билета + статус/результат участия.
+function MyTicketCard({ l, ticket, onOpen }) {
+  const finished = l.status === 'finished';
+  const win = finished && (l.winners || []).some(w => w.ticket === ticket);
+  const status = !finished ? { cls: 'live', text: 'Идёт' }
+    : win ? { cls: 'win', text: '🎉 Выигрыш' }
+    : { cls: 'lose', text: 'Не повезло' };
+  return (
+    <button onClick={() => onOpen(l.id)} className="lottery-card" style={{ '--card-accent': l.accentColor }}>
+      <div className="lottery-card-left">
+        {l.bannerUrl
+          ? <img src={l.bannerUrl} alt="" className="lottery-card-banner"/>
+          : <div className="lottery-card-prize-emoji">{l.prizeIcon}</div>}
+      </div>
+      <div className="lottery-card-body">
+        <div className="lottery-card-channel">
+          <span className="lottery-card-channel-emoji">{l.channelEmoji}</span>
+          <span>{l.ch}</span>
+        </div>
+        <div className="lottery-card-name">{l.title}</div>
+        <div className="lottery-ticket-strip">
+          <span className="lottery-ticket-no">🎫 Билет #{ticket}</span>
+          <span className={'lottery-status-pill ' + status.cls}>{status.text}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function LotteryFeedScreen({ accent, joinedIds = {}, savedIds = {}, myLotteries = [], filter, setFilter, onOpen, onToggleSave, onCreate }) {
   const mockActive = LOTTERY_MOCK.filter(l => l.status === 'active');
   const activeAll = [...myLotteries, ...mockActive];
-  const filtered = filter === 'mine' ? activeAll.filter(l => joinedIds[l.id])
+  const filtered = filter === 'mine' ? [...myLotteries, ...LOTTERY_MOCK].filter(l => joinedIds[l.id])
                  : filter === 'created' ? myLotteries
                  : filter === 'finished' ? LOTTERY_MOCK.filter(l => l.status === 'finished' || l.status === 'wave3-placeholder')
                  : activeAll;
@@ -2173,14 +2216,16 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
   // Sheet «Фильтр»: поиск / категория / способ участия / сортировка
   const [query, setQuery] = React.useState('');
   const [filterOpen, setFilterOpen] = React.useState(false);
+  const [savedOnly, setSavedOnly] = React.useState(false);
   const [sortBy, setSortBy] = React.useState('default');
   const [cats, setCats] = React.useState([]);
   const [methods, setMethods] = React.useState([]);
   const q = query.trim().toLowerCase();
-  const contentActive = !!q || cats.length > 0 || methods.length > 0 || sortBy !== 'default';
+  const contentActive = savedOnly || !!q || cats.length > 0 || methods.length > 0 || sortBy !== 'default';
   const activeFilterCount = cats.length + methods.length + (sortBy !== 'default' ? 1 : 0);
   let results = filtered.filter(l =>
-    (!q || (l.title + ' ' + l.prize + ' ' + l.ch).toLowerCase().includes(q))
+    (!savedOnly || savedIds[l.id])
+    && (!q || (l.title + ' ' + l.prize + ' ' + l.ch).toLowerCase().includes(q))
     && (cats.length === 0 || cats.includes(lotteryCat(l)))
     && (methods.length === 0 || methods.some(m => lotteryHasMethod(l, m))));
   if (sortBy === 'new') results = [...results].sort((a, b) => lotteryCreated(b) - lotteryCreated(a));
@@ -2211,7 +2256,7 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
         {[
           { id: 'all',      label: 'Все',         count: activeAll.length },
           { id: 'created',  label: 'Запущенные',  count: myLotteries.length },
-          { id: 'mine',     label: 'Подписки',    count: Object.keys(joinedIds).length },
+          { id: 'mine',     label: 'Мои билеты',  count: Object.keys(joinedIds).length },
           { id: 'finished', label: 'Завершённые', count: LOTTERY_MOCK.filter(l => l.status === 'finished' || l.status === 'wave3-placeholder').length },
         ].map(s => (
           <button key={s.id} onClick={() => setFilter(s.id)}
@@ -2234,6 +2279,9 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
             </button>
           )}
         </div>
+        <button onClick={() => setSavedOnly(s => !s)} className={'lottery-saved-btn' + (savedOnly ? ' active' : '')} aria-label="Избранное">
+          <iconify-icon icon={savedOnly ? 'ph:star-fill' : 'ph:star-bold'} width="16" height="16" style={{ display: 'inline-flex' }}/>
+        </button>
         <button onClick={() => setFilterOpen(true)} className={'lottery-filter-btn' + (activeFilterCount ? ' has-active' : '')}>
           <iconify-icon icon="ph:sliders-horizontal-bold" width="15" height="15" style={{ display: 'inline-flex' }}/>
           Фильтр
@@ -2245,18 +2293,20 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
       {contentActive ? (
         <>
           <div className="lottery-results-head">
-            <span>Найдено: {results.length}</span>
-            {activeFilterCount > 0 && (
-              <button onClick={() => { setSortBy('default'); setCats([]); setMethods([]); }} className="lottery-results-reset">
-                сбросить фильтр
+            <span>{savedOnly ? 'В закладках' : 'Найдено'}: {results.length}</span>
+            {(activeFilterCount > 0 || savedOnly) && (
+              <button onClick={() => { setSortBy('default'); setCats([]); setMethods([]); setSavedOnly(false); }} className="lottery-results-reset">
+                сбросить
               </button>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {results.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
+            {results.map(l => filter === 'mine'
+              ? <MyTicketCard key={l.id} l={l} ticket={joinedIds[l.id]} onOpen={onOpen}/>
+              : <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} saved={savedIds[l.id]} onToggleSave={onToggleSave} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
             {results.length === 0 && (
               <div style={{ padding: 30, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 13 }}>
-                Ничего не найдено — измени запрос или фильтр
+                {savedOnly ? 'В закладках пусто — добавляй розыгрыши звёздочкой ⭐' : 'Ничего не найдено — измени запрос или фильтр'}
               </div>
             )}
           </div>
@@ -2284,7 +2334,7 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
               )}
               {sponsorRest.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                  {sponsorRest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} onOpen={onOpen}/>)}
+                  {sponsorRest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} saved={savedIds[l.id]} onToggleSave={onToggleSave} onOpen={onOpen}/>)}
                 </div>
               )}
             </>
@@ -2295,7 +2345,7 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
             <>
               <FeedSection icon="ph:fire-duotone" title="Скоро завершатся" hint="успей вступить" fire/>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {endingSoon.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon onOpen={onOpen}/>)}
+                {endingSoon.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} saved={savedIds[l.id]} onToggleSave={onToggleSave} endingSoon onOpen={onOpen}/>)}
               </div>
             </>
           )}
@@ -2305,14 +2355,16 @@ function LotteryFeedScreen({ accent, joinedIds = {}, myLotteries = [], filter, s
             <>
               <FeedSection icon="ph:gift-duotone" title="Все розыгрыши"/>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {rest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} onOpen={onOpen}/>)}
+                {rest.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} saved={savedIds[l.id]} onToggleSave={onToggleSave} onOpen={onOpen}/>)}
               </div>
             </>
           )}
         </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-          {filtered.map(l => <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
+          {filtered.map(l => filter === 'mine'
+            ? <MyTicketCard key={l.id} l={l} ticket={joinedIds[l.id]} onOpen={onOpen}/>
+            : <LotteryCard key={l.id} l={l} joined={joinedIds[l.id]} saved={savedIds[l.id]} onToggleSave={onToggleSave} endingSoon={isSoon(l)} onOpen={onOpen}/>)}
           {filtered.length === 0 && (
             <div style={{ padding: 30, textAlign: 'center', color: 'var(--fg-mute)', fontSize: 13 }}>
               {filter === 'mine' ? 'Вы пока не участвуете ни в одном розыгрыше'
@@ -2452,7 +2504,7 @@ function LotteryJoinTicker({ joined }) {
   );
 }
 
-function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin }) {
+function LotteryDetailScreen({ lottery: l, accent, joined, reminded, onToggleRemind, saved, onToggleSave, onBack, onJoin }) {
   const [conditionsMet, setConditionsMet] = React.useState({});
   const metCount = l.conditions.filter(c => conditionsMet[c.target]).length;
   const allConditionsMet = metCount === l.conditions.length;
@@ -2505,6 +2557,20 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin }) {
           <div className="lottery-detail-stat-value" style={{ color: accent }}>{odds ? `~1 / ${odds}` : '—'}</div>
           <div className="lottery-detail-stat-label">Шанс</div>
         </div>
+      </div>
+
+      {/* Действия: напоминание + закладка */}
+      <div className="lottery-detail-actions">
+        <button onClick={() => { onToggleRemind(); window.toast && window.toast(reminded ? 'Напоминание отключено' : '🔔 Напомним за час до итогов'); }}
+          className={'lottery-action-btn' + (reminded ? ' active' : '')}>
+          <iconify-icon icon={reminded ? 'ph:bell-ringing-fill' : 'ph:bell-duotone'} width="16" height="16" style={{ display: 'inline-flex' }}/>
+          {reminded ? 'Напомним' : 'Напомнить'}
+        </button>
+        <button onClick={() => { onToggleSave(); window.toast && window.toast(saved ? 'Убрано из закладок' : '⭐ Добавлено в закладки'); }}
+          className={'lottery-action-btn' + (saved ? ' active' : '')}>
+          <iconify-icon icon={saved ? 'ph:star-fill' : 'ph:star-duotone'} width="16" height="16" style={{ display: 'inline-flex' }}/>
+          {saved ? 'В закладках' : 'В закладки'}
+        </button>
       </div>
 
       {/* Live social proof */}
@@ -2598,8 +2664,8 @@ function LotteryDetailScreen({ lottery: l, accent, joined, onBack, onJoin }) {
   );
 }
 
-function LotteryJoinedScreen({ lottery: l, accent, onBack }) {
-  const [ticketNum] = React.useState(() => Math.floor(Math.random() * 100000));
+function LotteryJoinedScreen({ lottery: l, accent, ticket, onBack }) {
+  const ticketNum = Number(ticket) || 0;
   const rolled = useCountUp(ticketNum, 1100);
   const odds = l.joined > 0 ? Math.max(1, Math.round(l.joined / Math.max(1, l.maxWinners))) : 0;
   const extras = l.extras || [];
@@ -2691,8 +2757,9 @@ function LotteryJoinedScreen({ lottery: l, accent, onBack }) {
 }
 
 // ─── Завершённый розыгрыш: пост канала + победители с ID ───
-function LotteryFinishedScreen({ lottery: l, accent, onBack }) {
+function LotteryFinishedScreen({ lottery: l, accent, myTicket, onBack }) {
   const winners = l.winners || [];
+  const myWin = myTicket ? winners.find(w => w.ticket === myTicket) : null;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 32px' }}>
       <div className="lottery-detail-topbar">
@@ -2706,6 +2773,22 @@ function LotteryFinishedScreen({ lottery: l, accent, onBack }) {
       </div>
 
       <div style={{ padding: '16px 16px 0' }}>
+        {myTicket && (
+          <div className={'lottery-result-banner ' + (myWin ? 'win' : 'lose')}>
+            <div className="lottery-result-emoji">{myWin ? '🎉' : '🍀'}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="lottery-result-title">
+                {myWin ? `Вы выиграли! ${myWin.place || ''} место`.trim() : 'В этот раз не повезло'}
+              </div>
+              <div className="lottery-result-sub">
+                {myWin
+                  ? `Билет #${myTicket} · напишите организатору ${l.ch}, чтобы забрать приз`
+                  : `Вы участвовали с билетом #${myTicket}. Следующий розыгрыш — ваш!`}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Пост канала */}
         <div className="lottery-finished-post">
           <div className="lottery-finished-post-head">
@@ -2732,14 +2815,15 @@ function LotteryFinishedScreen({ lottery: l, accent, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {winners.map((w, i) => {
               const medal = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : null;
+              const isMe = myTicket && w.ticket === myTicket;
               return (
-                <div key={i} className={`lottery-winner-row${i === 0 ? ' winner-top' : ''}`}>
+                <div key={i} className={`lottery-winner-row${i === 0 ? ' winner-top' : ''}${isMe ? ' you' : ''}`}>
                   <div className="lottery-winner-place" style={{ background: medal || 'var(--bg-2)', color: medal ? '#000' : 'var(--fg)' }}>
                     {w.place || i + 1}
                   </div>
                   <div className="lottery-winner-avatar">{(w.name || '?').charAt(0)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}{isMe && <span className="lottery-you-badge">Вы</span>}</div>
                     <div className="lottery-winner-id">{w.username} · ID {w.userId}</div>
                   </div>
                   <div className="lottery-winner-ticket">#{w.ticket}</div>
